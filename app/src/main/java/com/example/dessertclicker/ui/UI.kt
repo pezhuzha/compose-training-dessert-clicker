@@ -11,16 +11,19 @@ import kotlinx.coroutines.flow.update
 
 class UI : ViewModel() {
     private var dud: MutableStateFlow<DessertUIData> =MutableStateFlow(DessertUIData());
-    var uiState: MutableStateFlow<DessertUIData> = dud;
+    var uiState: StateFlow<DessertUIData> = dud.asStateFlow();
     
     fun onDessertClicked() {
-        uiState.update{currentState:DessertUIData->
+        dud.update{currentState->
+            var i:Int=currentState.currentDessertIndex
+            if(Datasource.dessertList[(currentState.currentDessertIndex)].startProductionAmount<currentState.dessertsSold){
+                i+=1}
             currentState.copy(
                 revenue=currentState.revenue+currentState.currentDessertPrice,
-                dessertsSold=currentState.dessertsSold++,
-                currentDessertIndex=(currentState.currentDessertIndex+1)%Datasource.dessertList.size,
-                currentDessertPrice=Datasource.dessertList[(currentState.currentDessertIndex+1)%Datasource.dessertList.size].imageId,
-                currentDessertImageId= Datasource.dessertList[(currentState.currentDessertIndex+1)%Datasource.dessertList.size].imageId
+                dessertsSold=currentState.dessertsSold+1,
+                currentDessertIndex=i,
+                currentDessertPrice=Datasource.dessertList[(currentState.currentDessertIndex)].price,
+                currentDessertImageId= Datasource.dessertList[(currentState.currentDessertIndex)].imageId
             )
         }
     }

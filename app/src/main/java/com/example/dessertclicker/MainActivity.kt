@@ -15,7 +15,7 @@
  */
 
 package com.example.dessertclicker
-
+import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -33,10 +33,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -44,6 +49,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,14 +57,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dessertclicker.data.DessertUIData
 import com.example.dessertclicker.model.Dessert
 import com.example.dessertclicker.ui.UI
 import com.example.dessertclicker.ui.theme.DessertClickerTheme
@@ -143,8 +153,77 @@ private fun DessertClickerApp(
     desserts: UI= viewModel()
 ) {
     val uiStat by desserts.uiState.collectAsStateWithLifecycle();
+    UIDessertClickerApp(
+        uiStat,
+        onDessertClicked = desserts::onDessertClicked ,
+    )
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
+@Composable
+private fun UIDessertClickerApp(
+    uiState: DessertUIData,
+    onDessertClicked: () -> Unit,
+    modifier: Modifier = Modifier
+){
+Scaffold(
+topBar = {
+    val intentContext = LocalContext.current
+    val layoutDirection = LocalLayoutDirection.current
+    DessertClickerAppBar(
+        onShareButtonClicked = {
+            shareSoldDessertsInformation(
+                intentContext = intentContext,
+                dessertsSold = uiState.dessertsSold,
+                revenue = uiState.revenue
+            )
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = WindowInsets.safeDrawing.asPaddingValues()
+                    .calculateStartPadding(layoutDirection),
+                end = WindowInsets.safeDrawing.asPaddingValues()
+                    .calculateEndPadding(layoutDirection),
+            )
+            .background(MaterialTheme.colorScheme.primary)
+    )
+}
+) { contentPadding ->
+    DessertClickerScreen(
+        revenue = uiState.revenue,
+        dessertsSold = uiState.dessertsSold,
+        dessertImageId = uiState.currentDessertImageId,
+        onDessertClicked = onDessertClicked,
+        modifier = Modifier.padding(contentPadding)
+    )
+}
+}
+/**
+ * Share desserts sold information using ACTION_SEND intent
+ */
+private fun shareSoldDessertsInformation(intentContext: Context, dessertsSold: Int, revenue: Int) {
+    val sendIntent = Intent().apply {
+        action = Intent.ACTION_SEND
+        putExtra(
+            Intent.EXTRA_TEXT,
+            intentContext.getString(R.string.share_text, dessertsSold, revenue)
+        )
+        type = "text/plain"
+    }
+
+    val shareIntent = Intent.createChooser(sendIntent, null)
+
+    try {
+        ContextCompat.startActivity(intentContext, shareIntent, null)
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(
+            intentContext,
+            intentContext.getString(R.string.sharing_not_available),
+            Toast.LENGTH_LONG
+        ).show()
+    }
+}
 @Composable
 private fun DessertClickerAppBar(
     onShareButtonClicked: () -> Unit,
